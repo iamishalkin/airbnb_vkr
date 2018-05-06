@@ -1,0 +1,272 @@
+---
+title: "VKR_empirical_part"
+output: html_document
+---
+
+```{r}
+setwd("~/")
+library(dplyr)
+prep <- function(df){
+    print(paste('initially: ', nrow(df)))
+    df <- df[!(is.na(df$price) | is.na(df$dist_walk)),]
+    print(paste('before dist: ', nrow(df)))
+    df <- df %>% 
+        filter(dist_walk < 15000,
+                        reviews_count > 0) %>% #shorten sample a lot
+        dplyr::select(price, city, dist_walk, to_centre,
+          Air_conditioning, Breakfast, Hair_dryer, Elevator_in_building, 
+          Essentials, Family_kid_friendly, Free_parking_on_premises, Free_parking_on_street,
+          Internet, Iron, Kitchen, Pets_allowed, Self_Check_In, Smoke_detector,
+          Smoking_allowed, Suitable_for_events, TV, Washer, bathrooms, bed_type,
+          bedrooms, beds, cancellation_policy, min_nights, person_capacity, picture_count,
+          instant_bookable, review_rating_value, lat, lon) %>% 
+        na.omit()
+    
+    print(paste('finally: ', nrow(df)))
+    return(df)
+}
+alma <- read.csv('m_Almaty.csv', encoding = 'UTF-8')
+alma <- prep(alma)
+alma$city <- 'Almaty'
+dnepr <- read.csv('m_Dnepr.csv', encoding = 'UTF-8')
+dnepr <- prep(dnepr)
+dnepr$city <- 'Dnepr'
+ekb <- read.csv('m_Ekaterinburg.csv', encoding = 'UTF-8')
+ekb <- prep(ekb)
+ekb$city <- 'Ekaterinburg'
+erevan <- read.csv('m_Erevan.csv', encoding = 'UTF-8')
+erevan <- prep(erevan)
+erevan$city <- 'Erevan'
+kazan <- read.csv('m_Kazan.csv', encoding = 'UTF-8')
+kazan <- prep(kazan)
+kazan$city <- 'Kazan'
+kharkov <- read.csv('m_Kharkov.csv', encoding = 'UTF-8')
+kharkov <- prep(kharkov)
+kharkov$city <- 'Kharkov'
+kiev <- read.csv('m_Kiev.csv', encoding = 'UTF-8')
+kiev <- prep(kiev)
+kiev$city <- 'Kiev'
+minsk <- read.csv('m_Minsk.csv', encoding = 'UTF-8')
+minsk <- prep(minsk)
+minsk$city <- 'Minsk'
+msk <- read.csv('m_Moscow.csv', encoding = 'UTF-8')
+msk <- prep(msk)
+msk$city <- 'Moscow'
+nn <- read.csv('m_Nizhnij-Novgorod.csv', encoding = 'UTF-8')
+nn <- prep(nn)
+nn$city <- 'N_Novgorod'
+novosibirsk <- read.csv('m_Novosibirsk.csv', encoding = 'UTF-8')
+novosibirsk <- prep(novosibirsk)
+novosibirsk$city <- 'Novosibirsk'
+spb <- read.csv('m_Saint-Petersburg.csv', encoding = 'UTF-8')
+spb <- prep(spb)
+spb$city <- 'Saint_Petersburg'
+samara <- read.csv('m_Samara.csv', encoding = 'UTF-8')
+samara <- prep(samara)
+samara$city <- 'Samara'
+baku <- read.csv('m_Baku.csv', encoding = 'UTF-8')
+baku <- prep(baku)
+baku$city <- 'baku'
+volgograd <- read.csv('m_Volgograd.csv', encoding = 'UTF-8')
+volgograd <- prep(volgograd)
+volgograd$city <- 'volgograd'
+tashkent <- read.csv('m_Tashkent.csv', encoding = 'UTF-8')
+tashkent <- prep(tashkent)
+tashkent$city <- 'Tashkent'
+#tbilisi <- read.csv('m_Tbilisi.csv', encoding = 'UTF-8')
+#tbilisi <- prep(tbilisi)
+#tbilisi$city <- 'Tbilisi'
+```
+В научных статьях рекомендуется рассматривать жилье на расстоянии 3км от метро. В нашем случае, из-за особенностей расположения станций и жилых домов в некоторых городах, метро может не играть важной роли в смысле средства передвижения. В таких городах близость к метро не является большим преимуществом, а соответственно много квартир сдается вдали от станций. Ввод ограничения в 3км сильно уменьшает количество наблюдений в таких городах, поэтому решено было это ограничение расширить до 15км.
+
+
+```{r}
+all_cities <- bind_rows(alma, dnepr, ekb, erevan, kazan, kharkov, kiev, minsk, msk, nn, novosibirsk, samara, spb, tbilisi) #%>%
+#    mutate(city = as.factor(city))
+```
+
+```{r}
+cl1 = msk
+cl2 = bind_rows(baku, kiev, spb)
+cl3 = bind_rows(minsk, kharkov, tashkent)
+cl4 = bind_rows(alma, kazan, volgograd, novosibirsk, dnepr, ekb, samara, erevan, nn) #tbilisi, 
+all_cities <- bind_rows(cl1, cl2, cl3, cl4)
+```
+
+```{r}
+library(Hmisc)
+des = describe(cl1)
+```
+
+
+
+```{r}
+formula <- formula(price ~ factor(city) + factor(city)*dist_walk + factor(city)*to_centre +
+          Air_conditioning + Breakfast + Hair_dryer + Elevator_in_building + 
+          Essentials + Family_kid_friendly + Free_parking_on_premises + Free_parking_on_street +
+          Internet + Iron + Kitchen + Pets_allowed + Self_Check_In + Smoke_detector +
+          Smoking_allowed + Suitable_for_events + TV + Washer + bathrooms + #factor(bed_type) +
+          bedrooms + beds + factor(cancellation_policy) + min_nights + person_capacity + picture_count +
+          instant_bookable + review_rating_value)
+logformula <- formula(log(price) ~ factor(city) + factor(city)*dist_walk + factor(city)*to_centre +
+          Air_conditioning + Breakfast + Hair_dryer + Elevator_in_building + 
+          Essentials + Family_kid_friendly + Free_parking_on_premises + Free_parking_on_street +
+          Internet + Iron + Kitchen + Pets_allowed + Self_Check_In + Smoke_detector +
+          Smoking_allowed + Suitable_for_events + TV + Washer + bathrooms + #factor(bed_type) +
+          bedrooms + beds + factor(cancellation_policy) + min_nights + person_capacity + picture_count +
+          instant_bookable + review_rating_value)
+ols <- lm(formula, data = all_cities)
+summary(ols)
+```
+
+
+
+
+
+
+
+
+```{r}
+formula <- formula(price ~ factor(city) + factor(city)*dist_walk + factor(city)*to_centre +
+          Air_conditioning + Breakfast + Hair_dryer + Elevator_in_building + 
+          Essentials + Family_kid_friendly + Free_parking_on_premises + Free_parking_on_street +
+          Internet + Iron + Kitchen + Pets_allowed + Self_Check_In + Smoke_detector +
+          Smoking_allowed + Suitable_for_events + TV + Washer + bathrooms + #factor(bed_type) +
+          bedrooms + beds + factor(cancellation_policy) + min_nights + person_capacity + picture_count +
+          instant_bookable + review_rating_value)
+logformula <- formula(log(price) ~ factor(city) + factor(city)*dist_walk + factor(city)*to_centre +
+          Air_conditioning + Breakfast + Hair_dryer + Elevator_in_building + 
+          Essentials + Family_kid_friendly + Free_parking_on_premises + Free_parking_on_street +
+          Internet + Iron + Kitchen + Pets_allowed + Self_Check_In + Smoke_detector +
+          Smoking_allowed + Suitable_for_events + TV + Washer + bathrooms + #factor(bed_type) +
+          bedrooms + beds + factor(cancellation_policy) + min_nights + person_capacity + picture_count +
+          instant_bookable + review_rating_value)
+ols <- lm(formula, data = all_cities)
+summary(ols)
+```
+
+Тест Бройша Пагана на гетероскедастичность, чтобы убедиться, что цены не независимы.
+
+```{r}
+library(lmtest)
+bptest(ols)
+```
+
+Действительно, корреляция в остатках присутствует. Скорее всего это связано с пространственным лагом.
+
+
+```{r}
+library(geosphere)
+weights <- function(df, threshold = 1000){
+    n <- nrow(df)
+    matrix = matrix(0, n, n, dimnames = list(df$apart_id,df$apart_id))
+    for (i in 1:n) {
+        matrix[i,] <- distHaversine(cbind(df$lon[i], df$lat[i]), cbind(df$lon, df$lat))
+    }
+    matrix[matrix > threshold] <- 0
+    matrix[matrix > 0] <- 1/matrix[matrix > 0]
+    matrix[rowSums(matrix) != 0,] <- t(apply(matrix[rowSums(matrix) != 0,], 1, function(x)(x/sum(x))))
+    return(matrix)
+}
+distance_matrix <- weights(all_cities)
+```
+
+Матрица весов для пространственных моделей сделана следующим образом: обратное расстояние по гаверсинусу.
+
+
+```{r}
+library(spdep)
+listw = mat2listw(distance_matrix, row.names = NULL, style="M")
+moran.test(all_cities$price, listw, zero.policy = TRUE)
+```
+
+Нулевая гипотеза об отсутвии пространствееной автокорреляции отвергается на всех разумных уровнях значимости
+
+```{r}
+# Lagrange multiplier test for spatial lag and spatial error dependencies
+lm.LMtests(ols, listw, test=c("LMlag", "LMerr"))
+```
+
+
+```{r}
+lar<- lagsarlm(formula, data=all_cities, listw, zero.policy = TRUE, tol.solve = 1e-12)
+```
+
+
+```{r}
+#SAR
+sar <- sacsarlm(formula, data=all_cities, listw, zero.policy = TRUE)
+#saveRDS(object = sar, file = "sacsarlm.rds")
+impact <- impacts(sar, listw = listw)
+#saveRDS(impact, file = "impact.rds")
+summary(sar1)
+```
+
+```{r}
+error<-GMerrorsar (formula,data=all_cities, listw, zero.policy = TRUE)
+#saveRDS(object = error, file = "error.rds")
+summary(error)
+```
+
+#Log price
+
+```{r}
+all_cities <- all_cities %>% 
+  filter(price > 0,
+         price < 20000) %>% 
+  mutate(dist_walk = dist_walk/100,
+         to_centre = to_centre/1000)
+distance_matrix <- weights(all_cities)
+listw = mat2listw(distance_matrix, row.names = NULL, style="M")
+```
+
+```{r}
+options(scipen = 4)
+options(digits = 4)
+library(nortest)
+ad.test(all_cities$price)
+ad.test(log(all_cities$price))
+ks.test(x=log(all_cities$price),y='pnorm',alternative='two.sided')
+```
+
+```{r}
+ggplot(all_cities) + geom_histogram(aes(price))
+ggplot(all_cities) + geom_histogram(aes(log(price)))
+```
+
+```{r}
+#log ols
+
+log_ols <- lm(logformula, data = all_cities)
+morani <- lm.morantest(log_ols, listw,  alternative='two.sided', zero.policy = TRUE)
+lms <- lm.LMtests(log_ols, listw, test='all', zero.policy= TRUE)
+summary(log_ols)
+```
+
+```{r}
+#log sar
+log_lar<- lagsarlm(logformula, data=all_cities, listw, zero.policy = TRUE, type='mixed')
+log_lar_2sls <- stsls(logformula, data=all_cities, listw, zero.policy = TRUE)
+summary(log_lar_2sls)
+```
+
+```{r}
+log_error <- GMerrorsar(logformula, data=all_cities, listw, zero.policy = TRUE)
+#saveRDS(object = log_error, file = "logerror.rds")
+summary(log_error)
+```
+
+```{r}
+#LOG SAR
+log_sar <- sacsarlm(logformula, data=all_cities, listw, zero.policy = TRUE)
+#saveRDS(object = log_sar, file = "log_sacsarlm.rds")
+impact <- impacts(log_sar, listw = listw)
+#saveRDS(impact, file = "logimpact.rds")
+summary(log_sar)
+```
+
+```{r}
+library(xtable)
+print(xtable(impact, digits =4), include.rownames = T, tabular.environment = 'longtable')
+```
+
