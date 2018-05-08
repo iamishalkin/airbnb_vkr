@@ -178,6 +178,18 @@ distance_matrix_cl1 <- weights(cl1)
 distance_matrix_cl2 <- weights(cl2)
 distance_matrix_cl3 <- weights(cl3)
 distance_matrix_cl4 <- weights(cl4)
+#without zeroes
+cl1_wz <- cl1[rowSums(distance_matrix_cl1) != 0,]
+distance_matrix_cl1_wz = distance_matrix_cl1[rowSums(distance_matrix_cl1) != 0, rowSums(distance_matrix_cl1) != 0]
+cl2_wz <- cl2[rowSums(distance_matrix_cl2) != 0, ]
+distance_matrix_cl2_wz = distance_matrix_cl2[rowSums(distance_matrix_cl2) != 0, rowSums(distance_matrix_cl2) != 0]
+cl3_wz <- cl3[rowSums(distance_matrix_cl3) != 0,]
+distance_matrix_cl3_wz = distance_matrix_cl3[rowSums(distance_matrix_cl3) != 0, rowSums(distance_matrix_cl3) != 0]
+cl4_wz <- cl4[rowSums(distance_matrix_cl4) != 0,]
+distance_matrix_cl4_wz = distance_matrix_cl4[rowSums(distance_matrix_cl4) != 0, rowSums(distance_matrix_cl4) != 0]
+
+
+
 ```
 
 Матрица весов для пространственных моделей сделана следующим образом: обратное расстояние по гаверсинусу.
@@ -190,11 +202,22 @@ listw_cl1 = mat2listw(distance_matrix_cl1, row.names = NULL, style="M")
 listw_cl2 = mat2listw(distance_matrix_cl2, row.names = NULL, style="M")
 listw_cl3 = mat2listw(distance_matrix_cl3, row.names = NULL, style="M")
 listw_cl4 = mat2listw(distance_matrix_cl4, row.names = NULL, style="M")
+#without zeroes
+listw_cl1_wz = mat2listw(distance_matrix_cl1_wz, row.names = NULL, style="M")
+listw_cl2_wz = mat2listw(distance_matrix_cl2_wz, row.names = NULL, style="M")
+listw_cl3_wz = mat2listw(distance_matrix_cl3_wz, row.names = NULL, style="M")
+listw_cl4_wz = mat2listw(distance_matrix_cl4_wz, row.names = NULL, style="M")
+
+ols_cl1_wz <- lm(logformula_cl1, data = cl1_wz)
+ols_cl2_wz <- lm(logformula, data = cl2_wz)
+ols_cl3_wz <- lm(logformula, data = cl3_wz)
+ols_cl4_wz <- lm(logformula, data = cl4_wz)
+
 moran.test(all_cities$price, listw, zero.policy = TRUE)
 moran.test(cl1$price, listw_cl1, zero.policy = TRUE)
 moran.test(cl2$price, listw_cl2, zero.policy = TRUE)
 moran.test(cl3$price, listw_cl3, zero.policy = TRUE)
-moran.test(cl3$price, listw_cl4, zero.policy = TRUE)
+moran.test(cl4$price, listw_cl4, zero.policy = TRUE)
 ```
 
 Нулевая гипотеза об отсутвии пространствееной автокорреляции отвергается на всех разумных уровнях значимости
@@ -202,16 +225,43 @@ moran.test(cl3$price, listw_cl4, zero.policy = TRUE)
 ```{r}
 # Lagrange multiplier test for spatial lag and spatial error dependencies
 lm.LMtests(ols, listw, test=c("LMlag", "LMerr"))
-lm.LMtests(ols_cl1, listw, test=c("LMlag", "LMerr"))
-lm.LMtests(ols_cl2, listw, test=c("LMlag", "LMerr"))
-lm.LMtests(ols_cl3, listw, test=c("LMlag", "LMerr"))
-lm.LMtests(ols_cl4, listw, test=c("LMlag", "LMerr"))
+lm.LMtests(ols_cl1_wz, listw_cl1_wz, test=c("LMlag", "LMerr"))
+lm.LMtests(ols_cl2_wz, listw_cl2_wz, test=c("LMlag", "LMerr"))
+lm.LMtests(ols_cl3_wz, listw_cl3_wz, test=c("LMlag", "LMerr"))
+lm.LMtests(ols_cl4_wz, listw_cl4_wz, test=c("LMlag", "LMerr"))
 ```
 
 ```{r}
-lar_cl1 <- lagsarlm(logformula_cl1, data=cl1, listw_cl1, zero.policy = TRUE, tol.solve = 1e-12)
-error <- errorsarlm()
+lar_cl1 <- lagsarlm(logformula_cl1, data=cl1_wz, listw_cl1_wz, zero.policy = TRUE, tol.solve = 1e-12)
+lar_cl2 <- lagsarlm(logformula, data=cl2_wz, listw_cl2_wz, zero.policy = TRUE, tol.solve = 1e-12)
+lar_cl3 <- lagsarlm(logformula, data=cl3_wz, listw_cl3_wz, zero.policy = TRUE, tol.solve = 1e-12)
+lar_cl4 <- lagsarlm(logformula, data=cl4_wz, listw_cl4_wz, zero.policy = TRUE, tol.solve = 1e-12)
+
+error_cl1 <- errorsarlm(logformula_cl1, data=cl1, listw_cl1, zero.policy = TRUE)
+error_cl2 <- errorsarlm(logformula, data=cl2_wz, listw_cl2_wz, zero.policy = TRUE)
+error_cl3 <- errorsarlm(logformula, data=cl3_wz, listw_cl3_wz, zero.policy = TRUE)
+error_cl4 <- errorsarlm(logformula, data=cl4_wz, listw_cl4_wz, zero.policy = TRUE)
+
+#save(lar_cl1, lar_cl2, lar_cl3, lar_cl4, error_cl1, error_cl2, error_cl3, error_cl4, file = "~/models.Rdata")
+save.image(file = "my_models.RData")
+summary(error_cl1)
 ```
+
+```{r}
+impact_lag_cl1 <- impacts(lar_cl1, listw = listw_cl1_wz)
+```
+
+
+
+```{r}
+#LOG SAR
+log_sar <- sacsarlm(logformula, data=all_cities, listw, zero.policy = TRUE)
+#saveRDS(object = log_sar, file = "log_sacsarlm.rds")
+impact <- impacts(log_sar, listw = listw)
+```
+
+
+
 
 
 
